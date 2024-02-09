@@ -13,6 +13,7 @@ package xdb
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"os"
 )
@@ -33,6 +34,8 @@ const (
 	VectorIndexPolicy IndexPolicy = 1
 	BTreeIndexPolicy  IndexPolicy = 2
 )
+
+var null_error = errors.New("my error") // 不需要处理错误
 
 func (i IndexPolicy) String() string {
 	switch i {
@@ -74,6 +77,7 @@ func NewHeader(input []byte) (*Header, error) {
 
 type Searcher struct {
 	handle *os.File
+	fsize  int64
 
 	// header info
 	header  *Header
@@ -86,7 +90,8 @@ type Searcher struct {
 
 	// content buffer.
 	// running with the whole xdb file cached
-	contentBuff []byte
+	contentBuff    []byte
+	contentBuffLen int64
 }
 
 func baseNew(dbFile string, vIndex []byte, cBuff []byte) (*Searcher, error) {
@@ -95,8 +100,9 @@ func baseNew(dbFile string, vIndex []byte, cBuff []byte) (*Searcher, error) {
 	// content buff first
 	if cBuff != nil {
 		return &Searcher{
-			vectorIndex: nil,
-			contentBuff: cBuff,
+			vectorIndex:    nil,
+			contentBuff:    cBuff,
+			contentBuffLen: int64(len(cBuff)),
 		}, nil
 	}
 
@@ -105,9 +111,11 @@ func baseNew(dbFile string, vIndex []byte, cBuff []byte) (*Searcher, error) {
 	if err != nil {
 		return nil, err
 	}
+	st, _ := handle.Stat()
 
 	return &Searcher{
 		handle:      handle,
+		fsize:       st.Size(),
 		vectorIndex: vIndex,
 	}, nil
 }
@@ -187,6 +195,9 @@ func (s *Searcher) Search(ip uint32) (string, error) {
 		p := sPtr + uint32(m*SegmentIndexBlockSize)
 		err := s.read(int64(p), buff)
 		if err != nil {
+			if errors.Is(err, null_error) {
+				return "", nil
+			}
 			return "", fmt.Errorf("read segment index at %d: %w", p, err)
 		}
 
@@ -206,7 +217,7 @@ func (s *Searcher) Search(ip uint32) (string, error) {
 		}
 	}
 
-	//fmt.Printf("dataLen: %d, dataPtr: %d", dataLen, dataPtr)
+	// fmt.Printf("dataLen: %d, dataPtr: %d", dataLen, dataPtr)
 	if dataLen == 0 {
 		return "", nil
 	}
@@ -215,10 +226,13 @@ func (s *Searcher) Search(ip uint32) (string, error) {
 	var regionBuff = make([]byte, dataLen)
 	err := s.read(int64(dataPtr), regionBuff)
 	if err != nil {
+		if errors.Is(err, null_error) {
+			return "", nil
+		}
 		return "", fmt.Errorf("read region at %d: %w", dataPtr, err)
 	}
 
-	return string(regionBuff), nil
+	return BytesToString(regionBuff), nil
 }
 
 // do the data read operation based on the setting.
@@ -226,11 +240,17 @@ func (s *Searcher) Search(ip uint32) (string, error) {
 // this operation will invoke the Seek for file based read.
 func (s *Searcher) read(offset int64, buff []byte) error {
 	if s.contentBuff != nil {
+		if s.contentBuffLen < offset+int64(len(buff)) {
+			return null_error
+		}
 		cLen := copy(buff, s.contentBuff[offset:])
 		if cLen != len(buff) {
 			return fmt.Errorf("incomplete read: readed bytes should be %d", len(buff))
 		}
 	} else {
+		if s.fsize < offset+int64(len(buff)) {
+			return null_error
+		}
 		_, err := s.handle.Seek(offset, 0)
 		if err != nil {
 			return fmt.Errorf("seek to %d: %w", offset, err)

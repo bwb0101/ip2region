@@ -61,15 +61,22 @@ func IterateSegments(handle *os.File, before func(l string), cb func(seg *Segmen
 			continue
 		}
 
+		var ps []string
+		if l[0] == '-' { // 忽略的ip段
+			ps = []string{"0.0.0.0", "0.0.0.0", ""}
+			goto L
+		}
+
 		if before != nil {
 			before(l)
 		}
 
-		var ps = strings.SplitN(l, "|", 3)
+		ps = strings.SplitN(l, "|", 3)
 		if len(ps) != 3 {
 			return fmt.Errorf("invalid ip segment line `%s`", l)
 		}
 
+	L:
 		sip, err := CheckIP(ps[0])
 		if err != nil {
 			return fmt.Errorf("check start ip `%s`: %s", ps[0], err)
@@ -84,9 +91,9 @@ func IterateSegments(handle *os.File, before func(l string), cb func(seg *Segmen
 			return fmt.Errorf("start ip(%s) should not be greater than end ip(%s)", ps[0], ps[1])
 		}
 
-		if len(ps[2]) < 1 {
-			return fmt.Errorf("empty region info in segment line `%s`", l)
-		}
+		// if len(ps[2]) < 1 {  // 忽略解析的ip段
+		// return fmt.Errorf("empty region info in segment line `%s`", l)
+		// }
 
 		var seg = &Segment{
 			StartIP: sip,

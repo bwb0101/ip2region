@@ -203,6 +203,9 @@ func (m *Maker) Start() error {
 
 	log.Printf("try to write the data block ... ")
 	for _, seg := range m.segments {
+		if seg.Region == "" {
+			continue // 忽略解析的ip段
+		}
 		log.Printf("try to write region '%s' ... ", seg.Region)
 		ptr, has := m.regionPool[seg.Region]
 		if has {
@@ -235,6 +238,9 @@ func (m *Maker) Start() error {
 	var indexBuff = make([]byte, SegmentIndexSize)
 	var counter, startIndexPtr, endIndexPtr = 0, int64(-1), int64(-1)
 	for _, seg := range m.segments {
+		if seg.Region == "" {
+			continue // 忽略解析的ip段
+		}
 		dataPtr, has := m.regionPool[seg.Region]
 		if !has {
 			return fmt.Errorf("missing ptr cache for region `%s`", seg.Region)

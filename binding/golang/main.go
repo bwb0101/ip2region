@@ -11,12 +11,13 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/lionsoul2014/ip2region/binding/golang/xdb"
-	"github.com/mitchellh/go-homedir"
 	"log"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/lionsoul2014/ip2region/binding/golang/xdb"
+	"github.com/mitchellh/go-homedir"
 )
 
 func printHelp() {

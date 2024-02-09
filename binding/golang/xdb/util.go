@@ -13,6 +13,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"unsafe"
 )
 
 var shiftIndex = []int{24, 16, 8, 0}
@@ -42,7 +43,12 @@ func CheckIP(ip string) (uint32, error) {
 }
 
 func Long2IP(ip uint32) string {
-	return fmt.Sprintf("%d.%d.%d.%d", (ip>>24)&0xFF, (ip>>16)&0xFF, (ip>>8)&0xFF, ip&0xFF)
+	_ip := int(ip)
+	i1 := strconv.Itoa((_ip >> 24) & 0xff)
+	i2 := strconv.Itoa((_ip >> 16) & 0xff)
+	i3 := strconv.Itoa((_ip >> 8) & 0xff)
+	i4 := strconv.Itoa(_ip & 0xff)
+	return i1 + "." + i2 + "." + i3 + "." + i4
 }
 
 func MidIP(sip uint32, eip uint32) uint32 {
@@ -179,4 +185,8 @@ func LoadContentFromFile(dbFile string) ([]byte, error) {
 	}
 
 	return cBuff, nil
+}
+
+func BytesToString(b []byte) string {
+	return *(*string)(unsafe.Pointer(&b))
 }

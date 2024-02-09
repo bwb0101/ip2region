@@ -44,15 +44,14 @@ func SegmentFrom(seg string) (*Segment, error) {
 
 // AfterCheck check the current segment is the one just after the specified one
 func (s *Segment) AfterCheck(last *Segment) error {
-	if last != nil {
-		if last.EndIP+1 != s.StartIP {
-			return fmt.Errorf(
-				"discontinuous data segment: last.eip+1(%d) != seg.sip(%d, %s)",
-				last.EndIP+1, s.StartIP, s.Region,
-			)
-		}
-	}
-
+	// if last != nil {
+	// 	if last.EndIP+1 != s.StartIP {
+	// 		return fmt.Errorf(
+	// 			"discontinuous data segment: last.eip+1(%d) != seg.sip(%d, %s)",
+	// 			last.EndIP+1, s.StartIP, s.Region,
+	// 		)
+	// 	}
+	// }
 	return nil
 }
 
@@ -76,7 +75,7 @@ func (s *Segment) Split() []*Segment {
 			StartIP: sip,
 			EndIP:   eip,
 			// @Note: don't bother to copy the region
-			/// Region: s.Region,
+			// / Region: s.Region,
 		})
 	}
 
