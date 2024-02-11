@@ -1,4 +1,4 @@
-module github.com/lionsoul2014/ip2region/binding/golang
+module github.com/bwb0101/ip2region/binding/golang
 
 go 1.17
 
